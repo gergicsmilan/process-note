@@ -71,6 +71,7 @@ namespace ProcWatcher
                 label.Resources = rd;
 
                 label.PreviewMouseLeftButtonDown += ListBoxItem_PreviewMouseLeftButtonDown;
+                label.MouseDoubleClick += ListBoxItem_MouseDoubleClick;
 
                 stackPanel.Children.Add(label);
                 item.Content = stackPanel;
@@ -80,5 +81,34 @@ namespace ProcWatcher
 
         }
 
+        private void ListBoxItem_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            Label label = (Label)sender;
+            Process clickedProcess = (Process)label.FindResource("process");
+
+            Process[] processes = Process.GetProcesses();
+
+            Process process = null;
+
+            foreach (Process proc in processes)
+            {
+                if (proc.Id == clickedProcess.Id)
+                {
+                    process = proc;
+                }
+            }
+
+            StackPanel stackPanel = (StackPanel)VisualTreeHelper.GetParent(label);
+
+            stackPanel.Children.RemoveAt(1);
+
+            TextBlock tb = new TextBlock();
+            tb.TextWrapping = TextWrapping.Wrap;
+
+            TimeSpan timeSinceStart = DateTime.Now - process.StartTime;
+
+            tb.Text = $"       Process Name: {process.ProcessName} | Process Id: {process.Id} | Started: {timeSinceStart.Hours} hours and {timeSinceStart.Minutes} minutes ago | Show Threads";
+            stackPanel.Children.Add(tb);
+        }
     }
 }
