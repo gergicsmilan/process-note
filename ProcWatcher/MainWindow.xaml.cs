@@ -13,6 +13,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Diagnostics;
+using System.Linq;
 
 namespace ProcWatcher
 {
@@ -41,7 +42,11 @@ namespace ProcWatcher
             else
             {
                 TextBlock tb = new TextBlock();
-                tb.Text = $"       Process Name: {process.ProcessName} | Process Id: {process.Id} | Started At: {process.StartTime.Hour} hours ago | Show Threads";
+                tb.TextWrapping = TextWrapping.Wrap;
+
+                TimeSpan timeSinceStart = DateTime.Now - process.StartTime;
+
+                tb.Text = $"       Process Name: {process.ProcessName} | Process Id: {process.Id} | Started: {timeSinceStart.Hours} hours and {timeSinceStart.Minutes} minutes ago | Show Threads";
                 stackPanel.Children.Add(tb);
             }
         }
@@ -49,16 +54,16 @@ namespace ProcWatcher
         private void GenerateListBoxItems() 
         {
             Process[] processes = Process.GetProcesses();
-            HashSet<Process> processSet = processes.ToHashSet();
 
 
-            foreach (Process process in processSet) 
+            foreach (Process process in processes) 
             {
-                ListBoxItem item = new ListBoxItem();             
+                ListBoxItem item = new ListBoxItem();       
 
                 StackPanel stackPanel = new StackPanel();
 
                 Label label = new Label();
+
                 label.Content = $"[{process.Id}] {process.ProcessName}";
 
                 ResourceDictionary rd = new ResourceDictionary();
