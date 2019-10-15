@@ -44,9 +44,18 @@ namespace ProcWatcher
                 TextBlock tb = new TextBlock();
                 tb.TextWrapping = TextWrapping.Wrap;
 
+                DateTime procStart = process.StartTime;
                 TimeSpan timeSinceStart = DateTime.Now - process.StartTime;
 
-                tb.Text = $"       Process Name: {process.ProcessName} | Process Id: {process.Id} | Started: {timeSinceStart.Hours} hours and {timeSinceStart.Minutes} minutes ago | Show Threads";
+                PerformanceCounter cpu = new PerformanceCounter("Process", "% Processor Time", process.ProcessName);
+                PerformanceCounter ram = new PerformanceCounter("Process", "Working Set", process.ProcessName);
+
+                double cpuUsage = cpu.NextValue();
+
+                tb.Text = $"       CPU Usage: {cpuUsage} % \n" +
+                    $"       Memory: {ConvertToMegaBytes(ram.NextValue())} megabytes \n" +
+                    $"       Running Time: {timeSinceStart.Hours} hours and {timeSinceStart.Minutes} minutes \n" +
+                    $"       Start Time: {procStart.Month}.{procStart.Day} - {procStart.Hour}:{procStart.Minute}";
                 stackPanel.Children.Add(tb);
             }
         }
@@ -79,6 +88,10 @@ namespace ProcWatcher
             }
 
         }
-
+        private int ConvertToMegaBytes(double number)
+        {
+            double dividiedNum = number / 1024 / 1024;
+            return Convert.ToInt32(Math.Round(dividiedNum));
+        }
     }
 }
