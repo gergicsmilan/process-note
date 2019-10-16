@@ -13,13 +13,16 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Diagnostics;
-using System.Linq;
+using System.Drawing;
+using System.IO;
 
 namespace ProcWatcher
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
+    /// 
+
     public partial class MainWindow : Window
     {
         public MainWindow()
@@ -31,10 +34,10 @@ namespace ProcWatcher
 
         private void ListBoxItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            Label label = (Label)sender;
-            Process process = (Process)label.FindResource("process");
+            StackPanel senderStack = (StackPanel)sender;
+            Process process = (Process)senderStack.FindResource("process");
 
-            StackPanel stackPanel = (StackPanel)VisualTreeHelper.GetParent(label);
+            StackPanel stackPanel = (StackPanel)VisualTreeHelper.GetParent(senderStack);
             if ( stackPanel.Children.Count >= 2)
             {
                 stackPanel.Children.RemoveAt(1);
@@ -71,17 +74,29 @@ namespace ProcWatcher
 
                 StackPanel stackPanel = new StackPanel();
 
-                Label label = new Label();
+                StackPanel processStack = new StackPanel();
+                processStack.Orientation = Orientation.Horizontal;
 
-                label.Content = $"[{process.Id}] {process.ProcessName}";
+                TextBlock text = new TextBlock();
+                text.Text = $" [{process.Id}] {process.ProcessName}";
+
+                System.Windows.Controls.Image img = new System.Windows.Controls.Image();
+                img.Source = GetImageSourceForIcon(GetProcessIconImage(process));
+                img.Width = 15;
+                img.Height = 15;
+                img.Stretch = Stretch.Fill;
+
+                processStack.Children.Add(img);
+                processStack.Children.Add(text);
+                
 
                 ResourceDictionary rd = new ResourceDictionary();
                 rd.Add("process", process);
-                label.Resources = rd;
+                processStack.Resources = rd;
 
-                label.PreviewMouseLeftButtonDown += ListBoxItem_PreviewMouseLeftButtonDown;
+                processStack.PreviewMouseLeftButtonDown += ListBoxItem_PreviewMouseLeftButtonDown;
 
-                stackPanel.Children.Add(label);
+                stackPanel.Children.Add(processStack);
                 item.Content = stackPanel;
 
                 ProcessBox.Items.Add(item);
@@ -93,5 +108,37 @@ namespace ProcWatcher
             double dividiedNum = number / 1024 / 1024;
             return Convert.ToInt32(Math.Round(dividiedNum));
         }
+
+        private Bitmap GetProcessIconImage(Process process) 
+        {
+            try
+            {
+                Icon ico = System.Drawing.Icon.ExtractAssociatedIcon(process.MainModule.FileName);
+                return ico.ToBitmap();
+            } catch (System.ComponentModel.Win32Exception e)
+            {
+                return new Bitmap(1, 1);
+            }
+            
+        }
+
+        private ImageSource GetImageSourceForIcon(Bitmap bmp) 
+        {
+            System.Windows.Controls.Image image = new System.Windows.Controls.Image();
+            using (var ms = new MemoryStream())
+            {
+                bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                ms.Position = 0;
+
+                var bi = new BitmapImage();
+                bi.BeginInit();
+                bi.CacheOption = BitmapCacheOption.OnLoad;
+                bi.StreamSource = ms;
+                bi.EndInit();
+                return image.Source = bi;
+            }
+            
+        }
+
     }
 }
