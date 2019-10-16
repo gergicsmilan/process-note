@@ -44,22 +44,24 @@ namespace ProcWatcher
             }
             else
             {
-                TextBlock tb = new TextBlock();
-                tb.TextWrapping = TextWrapping.Wrap;
+            CreateTextBlock(stackPanel, process);
 
-                DateTime procStart = process.StartTime;
-                TimeSpan timeSinceStart = DateTime.Now - process.StartTime;
+            TextBlock tb = new TextBlock();
+            tb.TextWrapping = TextWrapping.Wrap;
 
-                PerformanceCounter cpu = new PerformanceCounter("Process", "% Processor Time", process.ProcessName);
-                PerformanceCounter ram = new PerformanceCounter("Process", "Working Set", process.ProcessName);
+            DateTime procStart = process.StartTime;
+            TimeSpan timeSinceStart = DateTime.Now - process.StartTime;
 
-                double cpuUsage = cpu.NextValue();
+            PerformanceCounter cpu = new PerformanceCounter("Process", "% Processor Time", process.ProcessName);
+            PerformanceCounter ram = new PerformanceCounter("Process", "Working Set", process.ProcessName);
 
-                tb.Text = $"       CPU Usage: {cpuUsage} % \n" +
-                    $"       Memory: {ConvertToMegaBytes(ram.NextValue())} megabytes \n" +
-                    $"       Running Time: {timeSinceStart.Hours} hours and {timeSinceStart.Minutes} minutes \n" +
-                    $"       Start Time: {procStart.Month}.{procStart.Day} - {procStart.Hour}:{procStart.Minute}";
-                stackPanel.Children.Add(tb);
+            double cpuUsage = cpu.NextValue();
+
+            tb.Text = $"       CPU Usage: {cpuUsage} % \n" +
+                $"       Memory: {ConvertToMegaBytes(ram.NextValue())} megabytes \n" +
+                $"       Running Time: {timeSinceStart.Hours} hours and {timeSinceStart.Minutes} minutes \n" +
+                $"       Start Time: {procStart.Month}.{procStart.Day} - {procStart.Hour}:{procStart.Minute}";
+            stackPanel.Children.Add(tb);
             }
         }
 
@@ -74,34 +76,61 @@ namespace ProcWatcher
 
                 StackPanel stackPanel = new StackPanel();
 
-                StackPanel processStack = new StackPanel();
-                processStack.Orientation = Orientation.Horizontal;
 
-                TextBlock text = new TextBlock();
-                text.Text = $" [{process.Id}] {process.ProcessName}";
-
-                System.Windows.Controls.Image img = new System.Windows.Controls.Image();
-                img.Source = GetImageSourceForIcon(GetProcessIconImage(process));
-                img.Width = 15;
-                img.Height = 15;
-                img.Stretch = Stretch.Fill;
-
-                processStack.Children.Add(img);
-                processStack.Children.Add(text);
-                
-
-                ResourceDictionary rd = new ResourceDictionary();
-                rd.Add("process", process);
-                processStack.Resources = rd;
-
-                processStack.PreviewMouseLeftButtonDown += ListBoxItem_PreviewMouseLeftButtonDown;
-
-                stackPanel.Children.Add(processStack);
+                CreateLabel(stackPanel, process);
                 item.Content = stackPanel;
 
                 ProcessBox.Items.Add(item);
             }
 
+        }
+
+        private void ListBoxItem_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            Label label = (Label)sender;
+            Process clickedProcess = (Process)label.FindResource("process");
+
+            Process process = GetUpdatedProcess(clickedProcess);
+
+            StackPanel processStack = new StackPanel();
+            processStack.Orientation = Orientation.Horizontal;
+
+            TextBlock text = new TextBlock();
+            text.Text = $" [{process.Id}] {process.ProcessName}";
+
+            System.Windows.Controls.Image img = new System.Windows.Controls.Image();
+            img.Source = GetImageSourceForIcon(GetProcessIconImage(process));
+            img.Width = 15;
+            img.Height = 15;
+            img.Stretch = Stretch.Fill;
+
+            processStack.Children.Add(img);
+            processStack.Children.Add(text);
+
+
+            ResourceDictionary rd = new ResourceDictionary();
+            rd.Add("process", process);
+            processStack.Resources = rd;
+
+            processStack.PreviewMouseLeftButtonDown += ListBoxItem_PreviewMouseLeftButtonDown;
+
+            stackPanel.Children.Add(processStack);
+            item.Content = stackPanel;
+
+            StackPanel stackPanel = (StackPanel)VisualTreeHelper.GetParent(label);
+
+            if (GetUpdatedProcess(clickedProcess) == null)
+            {
+                MessageBox.Show("Process isn't running anymore.");
+            }
+            else
+            {
+                stackPanel.Children.Clear();
+
+                CreateLabel(stackPanel, process);
+
+                CreateTextBlock(stackPanel, process);
+            }
         }
         private int ConvertToMegaBytes(double number)
         {
@@ -140,5 +169,52 @@ namespace ProcWatcher
             
         }
 
+        private void CreateTextBlock(StackPanel stackPanel, Process process)
+        {
+            TextBlock tb = new TextBlock();
+            tb.TextWrapping = TextWrapping.Wrap;
+
+            try
+            {
+                TimeSpan timeSinceStart = DateTime.Now - process.StartTime;
+                tb.Text = $"       Process Name: {process.ProcessName} | Process Id: {process.Id} | Started: {timeSinceStart.Hours} hours and {timeSinceStart.Minutes} minutes ago | Show Threads";
+            }
+            catch
+            {
+                return;
+            }
+            stackPanel.Children.Add(tb);
+        }
+
+        private void CreateLabel(StackPanel stackPanel, Process process)
+        {
+            Label label = new Label();
+
+            label.Content = $"[{process.Id}] {process.ProcessName}";
+
+            ResourceDictionary rd = new ResourceDictionary();
+            rd.Add("process", process);
+            label.Resources = rd;
+
+            label.PreviewMouseLeftButtonDown += ListBoxItem_PreviewMouseLeftButtonDown;
+            label.MouseDoubleClick += ListBoxItem_MouseDoubleClick;
+
+            stackPanel.Children.Add(label);
+        }
+
+        private Process GetUpdatedProcess(Process clickedProcess)
+        {
+            Process[] processes = Process.GetProcesses();
+
+            foreach (Process process in processes)
+            {
+                if (process.Id == clickedProcess.Id)
+                {
+                    return process;
+                }
+            }
+
+            return null;
+        }
     }
 }
