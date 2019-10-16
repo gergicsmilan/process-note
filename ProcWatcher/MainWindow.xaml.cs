@@ -41,13 +41,7 @@ namespace ProcWatcher
             }
             else
             {
-                TextBlock tb = new TextBlock();
-                tb.TextWrapping = TextWrapping.Wrap;
-
-                TimeSpan timeSinceStart = DateTime.Now - process.StartTime;
-
-                tb.Text = $"       Process Name: {process.ProcessName} | Process Id: {process.Id} | Started: {timeSinceStart.Hours} hours and {timeSinceStart.Minutes} minutes ago | Show Threads";
-                stackPanel.Children.Add(tb);
+                CreateTextBlock(stackPanel, process);
             }
         }
 
@@ -62,18 +56,7 @@ namespace ProcWatcher
 
                 StackPanel stackPanel = new StackPanel();
 
-                Label label = new Label();
-
-                label.Content = $"[{process.Id}] {process.ProcessName}";
-
-                ResourceDictionary rd = new ResourceDictionary();
-                rd.Add("process", process);
-                label.Resources = rd;
-
-                label.PreviewMouseLeftButtonDown += ListBoxItem_PreviewMouseLeftButtonDown;
-                label.MouseDoubleClick += ListBoxItem_MouseDoubleClick;
-
-                stackPanel.Children.Add(label);
+                CreateLabel(stackPanel, process);
                 item.Content = stackPanel;
 
                 ProcessBox.Items.Add(item);
@@ -86,29 +69,70 @@ namespace ProcWatcher
             Label label = (Label)sender;
             Process clickedProcess = (Process)label.FindResource("process");
 
-            Process[] processes = Process.GetProcesses();
-
-            Process process = null;
-
-            foreach (Process proc in processes)
-            {
-                if (proc.Id == clickedProcess.Id)
-                {
-                    process = proc;
-                }
-            }
+            Process process = GetUpdatedProcess(clickedProcess);
 
             StackPanel stackPanel = (StackPanel)VisualTreeHelper.GetParent(label);
 
-            stackPanel.Children.RemoveAt(1);
+            if (GetUpdatedProcess(clickedProcess) == null)
+            {
+                MessageBox.Show("Process isn't running anymore.");
+            }
+            else
+            {
+                stackPanel.Children.Clear();
 
+                CreateLabel(stackPanel, process);
+
+                CreateTextBlock(stackPanel, process);
+            }
+        }
+
+        private void CreateTextBlock(StackPanel stackPanel, Process process)
+        {
             TextBlock tb = new TextBlock();
             tb.TextWrapping = TextWrapping.Wrap;
 
-            TimeSpan timeSinceStart = DateTime.Now - process.StartTime;
-
-            tb.Text = $"       Process Name: {process.ProcessName} | Process Id: {process.Id} | Started: {timeSinceStart.Hours} hours and {timeSinceStart.Minutes} minutes ago | Show Threads";
+            try
+            {
+                TimeSpan timeSinceStart = DateTime.Now - process.StartTime;
+                tb.Text = $"       Process Name: {process.ProcessName} | Process Id: {process.Id} | Started: {timeSinceStart.Hours} hours and {timeSinceStart.Minutes} minutes ago | Show Threads";
+            }
+            catch
+            {
+                return;
+            }
             stackPanel.Children.Add(tb);
+        }
+
+        private void CreateLabel(StackPanel stackPanel, Process process)
+        {
+            Label label = new Label();
+
+            label.Content = $"[{process.Id}] {process.ProcessName}";
+
+            ResourceDictionary rd = new ResourceDictionary();
+            rd.Add("process", process);
+            label.Resources = rd;
+
+            label.PreviewMouseLeftButtonDown += ListBoxItem_PreviewMouseLeftButtonDown;
+            label.MouseDoubleClick += ListBoxItem_MouseDoubleClick;
+
+            stackPanel.Children.Add(label);
+        }
+
+        private Process GetUpdatedProcess(Process clickedProcess)
+        {
+            Process[] processes = Process.GetProcesses();
+
+            foreach (Process process in processes)
+            {
+                if (process.Id == clickedProcess.Id)
+                {
+                    return process;
+                }
+            }
+
+            return null;
         }
     }
 }
